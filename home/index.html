@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  This HTML file serves as the main entry point for the Security Web App.
+  It includes styles, scripts, and the main content structure imported from respective files.
+  @author Matt Sebahar
+  @copyright Startupbootcamp Australia
+  @date 24.07.2025
+-->
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base target="_top">
+
+  <!-- Include a stylesheet for the key logo -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Include shared styles -->
+  <style>
+    //Include all styles and bg images
+    <?!=include('home/indexBgImage');?>
+    <?!=include('style');?>
+    <?!=include('home/indexStyle');?>
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <div class="header-bar">
+      <h1>Intern Verifications</h1>
+      <button class="button-primary"
+        onclick="window.top.location.href='<?= ScriptApp.getService().getUrl(); ?>?page=add'"> ADMIN SETTINGS</button>
+    </div>
+
+    <div id="card-grid" class="card-grid">
+      <!-- TOTP cards will be dynamically inserted here -->
+    </div>
+
+    <div id="loading-state" style="text-align: center; padding: 20px;">Loading secrets...</div>
+  </div>
+
+  <!-- Feedback Popup -->
+  <div class="feedback-overlay" id="feedback-overlay" onclick="hideFeedbackPopup()"></div>
+  <div class="feedback-popup" id="feedback-popup">
+    <div class="feedback-message" id="feedback-message"></div>
+    <button class="feedback-ok-btn" id="ok-button" onclick="hideFeedbackPopup()">OK</button>
+  </div>
+
+
+  <!--- Include the scripting -->
+  <?!=include('home/indexJs');?>
+  
+</body>
+
+</html>
