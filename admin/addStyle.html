@@ -1,0 +1,387 @@
+/**
+ * This file contains the styles for the Security Web App's add page.
+ * It includes styles for the main layout, navigation, forms, and buttons.
+ *
+ * @author Matt Sebahar
+ * @copyright Startupbootcamp Australia
+ * @date 24.07.2025
+ */
+
+    .main-flex-container {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      position: relative;
+    }
+
+    /* Top navigation bar */
+    .top-nav {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 10;
+    }
+
+    .back-to-dashboard-btn {
+      background-color: #008C8C;
+      color: white;
+      border: 2px solid #92D2D7;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: "Teko", "Proxima Nova", Helvetica, sans-serif;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 14px;
+      width: auto;
+      min-width: 160px;
+    }
+
+    .back-to-dashboard-btn:hover {
+      background-color: #92D2D7;
+      border-color: #008C8C;
+    }
+
+    .left-column {
+      flex: 3 1 500px;
+      min-width: 0;
+      margin-top: 40px;
+      /* Space for top nav */
+    }
+
+    .right-column {
+      flex: 2 1 300px;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      margin-top: 40px;
+    }
+
+    /* Admin list section */
+    .admin-list-section {
+      background-color: #fff;
+      border: 2px solid #30454A;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    /* Admin pills container */
+    .admin-pills-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 40px;
+      align-items: flex-start;
+      align-content: flex-start;
+    }
+
+    /* Codes pills container */
+    .codes-pills-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 40px;
+      align-items: flex-start;
+      align-content: flex-start;
+      margin-bottom: 16px;
+    }
+
+    /* Admin pill styling */
+    .admin-pill {
+      display: inline-flex;
+      align-items: center;
+      background-color: #E8F5F8;
+      border: 1px solid #008C8C;
+      border-radius: 16px;
+      padding: 6px 12px;
+      font-size: 14px;
+      color: #30454A;
+      font-family: "Proxima Nova", "Teko", Helvetica, sans-serif;
+      font-weight: 500;
+    }
+
+    /* Code pill styling */
+    .code-pill {
+      display: inline-flex;
+      align-items: center;
+      background-color: #E8F5F8;
+      border: 1px solid #008C8C;
+      border-radius: 16px;
+      padding: 6px 12px;
+      font-size: 14px;
+      color: #30454A;
+      font-family: "Proxima Nova", "Teko", Helvetica, sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .code-pill:hover {
+      background-color: #92D2D7;
+      border-color: #30454A;
+      transform: translateY(-1px);
+    }
+
+    .code-pill:active {
+      transform: translateY(0px);
+    }
+
+    .remove-pill {
+      margin-left: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      color: #666;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0 2px;
+      border-radius: 50%;
+      transition: color 0.2s ease;
+    }
+
+    .remove-pill:hover {
+      color: #dc3545;
+      background-color: rgba(220, 53, 69, 0.1);
+    }
+
+    .admin-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #E8F5F8;
+    }
+
+    .admin-item:last-child {
+      border-bottom: none;
+    }
+
+    .admin-email {
+      font-size: 14px;
+      color: #30454A;
+    }
+
+    .remove-admin {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+      line-height: 18px;
+    }
+
+    .remove-admin:hover {
+      background-color: #c82333;
+    }
+
+    .admin-entry-subsection {
+      margin-top: 24px; 
+      border-top: 1px solid #E8F5F8;"
+    }
+
+    /* Feedback popup */
+    .feedback-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      border: 2px solid #30454A;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      text-align: center;
+      min-width: 300px;
+      display: none;
+    }
+
+    .feedback-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: none;
+    }
+
+    .feedback-message {
+      font-size: 16px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    .feedback-ok-btn {
+      background-color: #008C8C;
+      color: white;
+      border: 2px solid #008C8C;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: "Teko", "Proxima Nova", Helvetica, sans-serif;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      width: auto;
+    }
+
+    .feedback-ok-btn:hover {
+      background-color: #92D2D7;
+      border-color: #92D2D7;
+    }
+
+    .qr-section,
+    .admin {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .container.admin {
+      margin-bottom: 24px;
+    }
+
+    /* Section backgrounds and borders */
+    .container {
+      background-color: #fff;
+      border-color: #008C8C;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 0px;
+      box-sizing: border-box;
+    }
+
+    .codes-section {
+      margin-bottom: 24px;
+    }
+
+    /* Section Header Styling */
+    .section-header {
+      font-size: 28px;
+      font-weight: bold;
+      color: #30454A;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    /* Consistent Label Styling */
+    label {
+      display: block;
+      margin-top: 8px;
+      margin-bottom: 4px;
+      font-weight: 500;
+      color: #30454A;
+      font-size: 16px;
+    }
+
+    input:disabled {
+      color: white;
+      background-color: #30454A;
+    }
+
+    #file-input {
+      display: none;
+    }
+
+    /*  QR Scan Button Style */
+    .qr-scan-button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      border: 2px dashed #008C8C;
+      border-radius: 6px;
+      background-color: #ffffff;
+      color: #30454A;
+      cursor: pointer;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+      font-size: 12px;
+      position: absolute;
+      top: 10px;
+      right: 27px;
+    }
+
+    .qr-scan-button:hover {
+      background-color: #E8F5F8;
+    }
+
+    .qr-scan-button svg {
+      width: 40px;
+      height: 40px;
+      fill: #30454A;
+      transition: fill 0.2s ease;
+    }
+
+    .qr-scan-button:hover svg {
+      fill: #008C8C;
+    }
+
+    .qr-scan-button span {
+      font-size: 16px;
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    .company-container {
+      position: relative;
+    }
+
+    /* Action Buttons Styling */
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button,
+    .button-primary {
+      cursor: pointer;
+      padding: 12px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 16px;
+      transition: background-color 0.2s, transform 0.1s;
+      border: 2px solid transparent;
+    }
+
+    button:active,
+    .button-primary:active {
+      transform: translateY(1px);
+    }
+
+    .form-actions .button-primary {
+      background-color: #008C8C;
+      color: white;
+      border-color: #30454A;
+      font-size: 16px;
+      height: 48px; 
+    }
+
+    .form-actions .button-primary:hover {
+      background-color: #92D2D7;
+    }
+
+    button.secondary {
+      background-color: #30454A;
+      color: #fff;
+      border-color: #30454A;
+      font-size: 16px;
+      height: 48px;
+    }
+
+    button.secondary:hover {
+      background-color: #92D2D7;
+    }
+
+    .mini-header {
+      margin-bottom: 0cm;
+    }

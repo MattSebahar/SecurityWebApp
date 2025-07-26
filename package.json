@@ -1,0 +1,19 @@
+{
+  "name": "securitywebapp",
+  "version": "1.0.0",
+  "description": "Web app designed to store and securely show 2FA codes for SBC",
+  "license": "ISC",
+  "author": "Matt Sebahar",
+  "type": "commonjs",
+  "main": "Code.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "crypto-js": "^4.2.0",
+    "jsqr": "^1.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.5"
+  }
+}

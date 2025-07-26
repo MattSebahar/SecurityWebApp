@@ -1,0 +1,179 @@
+<script>
+/**
+ * This script handles the functionality for the Security Web App's index page
+ * It includes fetching TOTP codes, displaying them in cards, and managing the countdown timer for code refresh.
+ * 
+ * @author Matt Sebahar
+ * @copyright Startupbootcamp Australia
+ * @date 24.07.2025
+ */
+    
+    /**
+     * Main function to fetch secrets, generate TOTP codes, and display them.
+     */
+    function displayAllTotps() {
+      const grid = document.getElementById('card-grid');
+      const loadingState = document.getElementById('loading-state');
+
+      // Show initial loading message
+      loadingState.textContent = 'Loading secrets...';
+      loadingState.style.display = 'block';
+
+      // After 1 second, switch to checking permissions
+      setTimeout(() => {
+        if (loadingState.style.display !== 'none') {
+          loadingState.textContent = 'Checking permissions...';
+        }
+      }, 1000);
+
+      google.script.run
+        .withSuccessHandler(totpData => {
+          loadingState.style.display = 'none';
+          grid.innerHTML = ''; // Clear previous cards
+
+          if (!totpData || totpData.length === 0) {
+            grid.innerHTML = `<div class="no-codes"><p>No secrets stored yet.</p><p>Ask an Admin or visit notion to start!</p></div>`;
+            return;
+          }
+
+          totpData.forEach((data, index) => {
+            const card = `
+                            <div class="card" id="card-${index}">
+                                <div class="card-header">
+                                  <div class="header-info">
+                                    <div class="company">${data.company || 'N/A'}</div>
+                                    <div class="email">${data.email || 'N/A'}</div>
+                                  </div>
+                                  <div class="card-key" onclick="copyPassword('${data.password || ''}')">
+                                        <i class="fas fa-key"></i>
+                                  </div>
+                                </div>
+                                    
+                                <div class="card-body">
+                                    <div class="totp-code" id="totp-${index}">${data.totpCode || 'Error'}</div>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-inner" id="progress-${index}"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+            grid.innerHTML += card;
+          });
+        })
+        .withFailureHandler(error => {
+          loadingState.textContent = 'Error loading TOTP codes: ' + error.message;
+          console.error('Error fetching TOTP codes:', error);
+        })
+        .getTotp2FACodes();
+    }
+
+    /**
+     * Updates the displayed TOTP codes and their progress bars.
+     */
+    function updateCodes() {
+      const grid = document.getElementById('card-grid');
+      if (!grid.children.length || grid.querySelector('.no-codes')) {
+        // Don't try to update if there are no cards
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(totpData => {
+          totpData.forEach((data, index) => {
+            const totpElement = document.getElementById(`totp-${index}`);
+            if (totpElement) {
+              totpElement.textContent = data.totpCode || 'Error';
+            }
+          });
+        })
+        .getTotp2FACodes();
+    }
+
+    /**
+     * Manages the 30-second countdown timer and progress bar animation.
+     */
+    function manageTimer() {
+      const timeStep = 30;
+      const now = Math.floor(Date.now() / 1000);
+      const secondsLeft = timeStep - (now % timeStep);
+      const percentage = (secondsLeft / timeStep) * 100;
+
+      const progressBars = document.querySelectorAll('.progress-bar-inner');
+
+      // Set initial width without transition to avoid animation jump on load
+      if (!window.timerInitialized) {
+        progressBars.forEach(bar => {
+          bar.style.transition = 'none';
+          bar.style.width = percentage + '%';
+        });
+        // Force a reflow before re-enabling transition
+        void document.body.offsetWidth;
+        window.timerInitialized = true;
+      }
+
+      progressBars.forEach(bar => {
+        bar.style.transition = 'width 1s linear';
+        bar.style.width = percentage + '%';
+      });
+
+      // When the timer is about to reset, refresh the codes
+      if (secondsLeft === 30) {
+        updateCodes();
+      }
+    }
+
+    /**
+     * Function to copy the password provided into the users clipboard
+     */
+    function copyPassword(passCopy) {
+      // If no password to copy, alert of an error
+      if (!passCopy || passCopy.trim() === '') {
+        showFeedbackPopup("No password available for this entry", 'error');
+        return;
+      }
+
+      // Copy to the users clipboard
+      navigator.clipboard.writeText(passCopy)
+        .then(() => {
+          showFeedbackPopup("Copied: '" + passCopy + "' to clipboard!", 'success');
+        })
+        .catch(err => {
+          console.error('Failed to copy text: ', err);
+          showFeedbackPopup("Failed to copy password to clipboard", 'error');
+        });
+    }
+
+    /**
+     * Show feedback popup with message
+     */
+    function showFeedbackPopup(message, type = 'info') {
+      const popup = document.getElementById('feedback-popup');
+      const overlay = document.getElementById('feedback-overlay');
+      const messageDiv = document.getElementById('feedback-message');
+
+      messageDiv.textContent = message;
+      messageDiv.style.color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#30454A';
+
+      overlay.style.display = 'block';
+      popup.style.display = 'block';
+    }
+
+    /**
+     * Hide feedback popup
+     */
+    function hideFeedbackPopup() {
+      document.getElementById('feedback-overlay').style.display = 'none';
+      document.getElementById('feedback-popup').style.display = 'none';
+    }
+
+    // Initial load
+    window.onload = () => {
+      displayAllTotps();
+      // Start the timers once the cards are potentially on the page
+      setTimeout(() => {
+        setInterval(manageTimer, 1000); // Check every second for smooth progress bar
+      }, 500);
+    };
+</script>
