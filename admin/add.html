@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  This HTML file is used as the admin page for adding new companies and managing users.
+  It imports styles and scripts from the respective 'add' files
+  @author Matt Sebahar
+  @copyright Startupbootcamp Australia
+  @date 24.07.2025
+-->
+  
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base target="_top">
+
+  <!-- Include style sheets -->
+  <style>
+    <?!=include('admin/addBgImage');?>
+    <?!=include('style');?>
+    <?!=include('admin/addStyle');?>
+  </style>
+</head>
+
+<body>
+  <div class="main-flex-container">
+    <!-- Top Navigation Bar -->
+    <div class="top-nav">
+      <button class="back-to-dashboard-btn"
+        onclick="window.top.location.href='<?= ScriptApp.getService().getUrl(); ?>'">&larr; Back to Dashboard</button>
+    </div>
+
+    <!-- Left Column for Company Form -->
+    <div class="left-column">
+      <div class="container company company-container">
+        <div class="header-bar section-header">
+          Add New Company
+        </div>
+
+        <!-- Small QR Code Scanner in top right -->
+        <label for="file-input" class="qr-scan-button">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M0 0h24v24H0V0z" fill="none" />
+            <path
+              d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm8-12v8h8V3h-8zm6 6h-4V5h4v4zM13 15h2v2h-2zM15 13h2v2h-2zM13 17h2v2h-2zM17 17h2v2h-2zM19 13h2v2h-2zM15 17h2v2h-2zM17 13h2v2h-2zM19 15h2v2h-2zM19 19h2v2h-2zM15 19h2v2h-2zM17 21h2v2h-2zM13 21h2v2h-2z" />
+          </svg>
+          <span>Scan QR</span>
+        </label>
+        <input type="file" id="file-input" accept="image/*" onchange="handleQrCodeFile(event)">
+        <div id="qr-status" style="position: absolute; top: 95px; right: 10px; font-size: 12px; text-align: center; width: 80px;"></div>
+
+        <label for="company">Company Name:</label>
+        <input type="text" id="company" placeholder="e.g., HubSpot, Airtable">
+
+        <label for="email">Email / Username:</label>
+        <input type="text" id="email" placeholder="e.g., matt@startupbootcamp.com.au">
+
+        <label for="password">Password:</label>
+        <input type="text" id="password" placeholder="Enter password for this account">
+
+        <label for="secretSeed">Secret Seed:</label>
+        <input type="text" id="secretSeed" placeholder="Enter secret provided on sign up">
+
+        <div class="form-actions">
+          <button class="button-primary" id="save-secret" onclick="saveNewSecret()">Save Secret</button>
+          <button class="secondary" id="cancel-edit" onclick="resetFormToAddMode()" style="display: none;">Cancel
+            Edit</button>
+        </div>
+      </div>
+
+      <!-- 2FA Codes Section -->
+      <div class="container codes-section">
+        <div class="header-bar section-header">
+          Current 2FA Codes
+        </div>
+        <div id="codes-list-container" class="codes-pills-container">
+          <!-- 2FA code pills will be populated here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column for User Management -->
+    <div class="right-column">
+
+      <!-- Combined User Management Section -->
+      <div class="container admin">
+        <div class="header-bar section-header">
+          User Management
+        </div>
+
+        <!-- User Selection and Permissions -->
+        <div class="user-management-section">
+          <h3 class='mini-header'>Select User or Group to Manage: </h3>
+          <select id="user-select" onchange="loadUserPermissions()" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #008C8C; border-radius: 4px;">
+            <option value="">-- Select a user or group --</option>
+          </select>
+          
+          <!-- User Permissions Container -->
+          <div id="user-permissions-container" style="display: none;">
+            <div style="margin-bottom: 16px; display: flex; gap: 16px; flex-wrap: wrap;">
+              <div id="user-groups-container" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <!-- User group radios will be populated here -->
+              </div>
+            </div>
+            
+            <h4 class='mini-header'>Card Permissions:</h4>
+            <div id="card-permissions-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #E8F5F8; padding: 12px; border-radius: 4px;">
+              <!-- Card permissions will be populated here -->
+            </div>
+            
+            <div class="form-actions">
+              <button class="button-primary" onclick="saveUserPermissions()">Save Permissions</button>
+              <button class="secondary" onclick="removeSelectedUser()">Remove User</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add New User -->
+        <div class="admin-entry-subsection" >
+          <h3 class='mini-header'>Add New User Email: </h3>
+          <input type="text" id="user-email" placeholder="e.g., user@startupbootcamp.com.au">
+          <div class="form-actions">
+            <button class="button-primary" onclick="saveNewUser()">Add User</button>
+          </div>
+        </div>
+
+        <!-- Add New User Group -->
+        <div class="admin-entry-subsection">
+          <h3 class='mini-header'>Add New User Group: </h3>
+          <input type="text" id="group-name" placeholder="e.g., Scouting Team">
+          <div class="form-actions">
+            <button class="button-primary" onclick="saveNewUserGroup()">Add User Group</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback Popup -->
+    <div class="feedback-overlay" id="feedback-overlay" onclick="hideFeedbackPopup()"></div>
+    <div class="feedback-popup" id="feedback-popup">
+      <div class="feedback-message" id="feedback-message"></div>
+      <button class="feedback-ok-btn" id="ok-button" onclick="hideFeedbackPopup()">OK</button>
+    </div>
+
+    <canvas id="qr-canvas" style="display: none;"></canvas>
+
+    <!--- Include all of the scripting --->
+    <?!=include('imports/crypto-js'); ?>
+    <?!=include('imports/jsQR'); ?>
+    <?!=include('admin/addJs'); ?>
+
+  
+</body>
+
+</html>

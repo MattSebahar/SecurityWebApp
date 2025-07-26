@@ -1,0 +1,174 @@
+/**
+ * This file contains the styles for the Security Web App's index page.
+ * It includes styles for the main layout, navigation, forms, and buttons.
+ *
+ * @author Matt Sebahar
+ * @copyright Startupbootcamp Australia
+ * @date 24.07.2025
+ */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      border: 2px solid #008C8C;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-key {
+      cursor: pointer;
+      /* Indicates it's clickable */
+      font-size: 1.2em;
+      color: #30454A;
+      padding: 5px;
+      border-radius: 4px;
+    }
+
+    .card-key:hover {
+      background-color: #008C8C;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .card-header .company {
+      font-size: 24px;
+      font-weight: bold;
+      color: #30454A;
+    }
+
+    .card-header .email {
+      font-size: 16px;
+      color: #008C8C;
+    }
+
+    .card-body .totp-code {
+      font-size: 40px;
+      font-weight: bold;
+      color: #30454A;
+      text-align: center;
+      letter-spacing: 5px;
+      margin: 10px 0;
+      background-color: #E8F5F8;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .card-footer {
+      margin-top: auto;
+    }
+
+    .container {
+      border: none;
+    }
+
+    .progress-bar {
+      width: 100%;
+      background-color: #E8F5F8;
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    .progress-bar-inner {
+      height: 100%;
+      width: 100%;
+      background-color: #008C8C;
+      border-radius: 4px;
+      transition: width 1s linear;
+    }
+
+    .no-codes {
+      text-align: center;
+      padding: 40px;
+      background-color: #fff;
+      border-radius: 8px;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background-color: #ffffff;
+      border: 2px solid #008C8C;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .header-bar h1 {
+      color: #30454A;
+      font-size: 32px;
+      font-weight: bolder;
+      margin: 0;
+    }
+
+    .header-bar button {
+      max-width: 200px;
+      width: auto;
+    }
+
+    /* Feedback popup */
+    .feedback-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      border: 2px solid #30454A;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      text-align: center;
+      min-width: 300px;
+      display: none;
+    }
+
+    .feedback-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: none;
+    }
+
+    .feedback-message {
+      font-size: 16px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+
+    .feedback-ok-btn {
+      background-color: #008C8C;
+      color: white;
+      border: 2px solid #008C8C;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: "Teko", "Proxima Nova", Helvetica, sans-serif;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      width: auto;
+    }
+
+    .feedback-ok-btn:hover {
+      background-color: #92D2D7;
+      border-color: #92D2D7;
+    }
