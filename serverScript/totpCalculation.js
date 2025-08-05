@@ -35,7 +35,7 @@ function saveSecret(data) {
 
       // Update password if provided
       if (data.encryptedPassword) {
-        const decryptedPassword = decryptSeed(data.encryptedPassword, data.newCompany + data.newEmail);
+        const decryptedPassword = decryptWithCredentials(data.encryptedPassword, data.newCompany, data.newEmail);
         existingSecret.encryptedPass = encryptWithMasterKey(decryptedPassword);
       } else {
         // Remove password if not provided
@@ -64,7 +64,7 @@ function saveSecret(data) {
       }
 
       // Decrypt the seed for server-side processing
-      const decryptedSeed = decryptSeed(data.encryptedSeed, data.company + data.email);
+      const decryptedSeed = decryptWithCredentials(data.encryptedSeed, data.company, data.email);
 
       // Verify the seed is valid by generating a TOTP
       const testTotp = getTotp(decryptedSeed);
@@ -75,7 +75,7 @@ function saveSecret(data) {
       // Decrypt password if provided
       let decryptedPassword = null;
       if (data.encryptedPassword) {
-        decryptedPassword = decryptSeed(data.encryptedPassword, data.company + data.email);
+        decryptedPassword = decryptWithCredentials(data.encryptedPassword, data.company, data.email);
       }
 
       // Check for existing entry with same company and email
@@ -247,79 +247,6 @@ function getTotp2FACodes() {
   } catch (error) {
     console.error('Error getting TOTP codes:', error);
     return [];
-  }
-}
-
-
-
-/**
- * Encrypts data with a master key stored in Script Properties.
- * @param {string} data The data to encrypt.
- * @returns {string} The encrypted data.
- */
-function encryptWithMasterKey(data) {
-
-  try {
-    const masterKey = getMasterKey();
-
-    // Simple encryption using base64 encoding with key mixing
-    const combined = data + '|||' + masterKey.substring(0, 16);
-    return Utilities.base64Encode(combined);
-  } catch (error) {
-    console.error('Encryption error:', error);
-    throw new Error('Failed to encrypt data');
-  }
-}
-
-/**
- * Decrypts data with the master key.
- * @param {string} encryptedData The encrypted data.
- * @returns {string} The decrypted data.
- */
-function decryptWithMasterKey(encryptedData) {
-  try {
-    const masterKey = getMasterKey();
-
-    const decoded = Utilities.base64Decode(encryptedData);
-    const combined = Utilities.newBlob(decoded).getDataAsString();
-    const parts = combined.split('|||');
-
-    if (parts.length !== 2 || parts[1] !== masterKey.substring(0, 16)) {
-      throw new Error('Invalid encrypted data or key mismatch');
-    }
-
-    return parts[0];
-  } catch (error) {
-    console.error('Decryption error:', error);
-    throw new Error('Failed to decrypt data');
-  }
-}
-
-/**
- * Decrypts the client-side encrypted seed.
- * @param {string} encryptedSeed The AES encrypted seed from client.
- * @param {string} key The key used for encryption (company + email).
- * @returns {string} The decrypted seed.
- */
-function decryptSeed(encryptedSeed, key) {
-  try {
-
-    // Decode the base64 encrypted data
-    const decoded = Utilities.base64Decode(encryptedSeed);
-    const encryptedString = Utilities.newBlob(decoded).getDataAsString();
-
-    // XOR decryption 
-    let decrypted = '';
-    for (let i = 0; i < encryptedString.length; i++) {
-      decrypted += String.fromCharCode(
-        encryptedString.charCodeAt(i) ^ key.charCodeAt(i % key.length)
-      );
-    }
-
-    return decrypted;
-  } catch (error) {
-    console.error('Seed decryption error:', error);
-    throw new Error('Failed to decrypt seed');
   }
 }
 

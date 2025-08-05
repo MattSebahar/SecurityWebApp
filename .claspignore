@@ -1,6 +1,22 @@
+# SecurityWebApp .claspignore file
+
+# Git files
 .git/
 .gitignore
+
+# Node.js files -
+node_modules/**
 node_modules/
+**/node_modules/**
+package.json
+package-lock.json
+
+# Project files
 .claspignore
 README.md
-package-lock.json
+.env
+*.log
+
+# IDE files
+.vscode/
+.idea/
