@@ -1,0 +1,798 @@
+<script>
+   /**
+    * This script handles the functionality for adding new 2FA secrets and managing users.
+    * It includes QR code scanning, form validation, and user management features.
+    * 
+    * @author Matt Sebahar
+    * @copyright Startupbootcamp Australia
+    * @date 24.07.2025
+    */
+
+    // Global variable to track edit mode
+      let isEditMode = false;
+      let editingCompany = null;
+      let editingEmail = null;
+
+      /**
+     * Handles the file selection event for the QR code.
+     * @param {Event} event The file input change event.
+     */
+      function handleQrCodeFile(event) {
+        const file = event.target.files[0];
+        const statusDiv = document.getElementById('qr-status');
+        if (!file) {
+          return;
+        }
+
+        statusDiv.textContent = 'Processing image...';
+        statusDiv.style.color = '#666';
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+          const img = new Image();
+          img.onload = function () {
+            const canvas = document.getElementById('qr-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0, img.width, img.height);
+            const imageData = ctx.getImageData(0, 0, img.width, img.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            if (code) {
+              try {
+                const url = new URL(code.data);
+                const secret = url.searchParams.get('secret');
+                const issuer = url.searchParams.get('issuer') || url.pathname.split(':').pop().split('/')[0].trim();
+                const account = decodeURIComponent(url.pathname).split(':').pop().split('/').pop().trim();
+
+                if (secret) {
+                  document.getElementById('secretSeed').value = secret;
+                  document.getElementById('company').value = issuer || '';
+                  document.getElementById('email').value = account || '';
+                  statusDiv.textContent = 'QR Code decoded successfully!';
+                  statusDiv.style.color = '#28a745';
+                } else {
+                  throw new Error("'secret' parameter not found in QR code.");
+                }
+              } catch (err) {
+                console.error("Error parsing QR code URL:", err);
+                statusDiv.textContent = 'Error: Invalid QR code format.';
+                statusDiv.style.color = '#dc3545';
+              }
+            } else {
+              statusDiv.textContent = 'Error: No QR code found in image.';
+              statusDiv.style.color = '#dc3545';
+            }
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      /**
+       * Gathers data from the form and calls the server-side save function.
+       */
+      function saveNewSecret() {
+        const company = document.getElementById('company').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const seed = document.getElementById('secretSeed').value.trim().replace(/\s/g, ''); // Remove spaces
+
+        // Different validation for edit mode vs add mode
+        if (isEditMode) {
+          // In edit mode, seed is not required and should be ignored
+          if (!company || !email) {
+            showFeedbackPopup('Company and email are required.', 'error');
+            return;
+          }
+        } else {
+          // In add mode, all fields except password are required
+          if (!company || !email || !seed) {
+            showFeedbackPopup('Company, email, and secret seed are required.', 'error');
+            return;
+          }
+        }
+
+        let data;
+
+        if (isEditMode) {
+          // For updates, send original identifiers and new data
+          data = {
+            isUpdate: true,
+            originalCompany: editingCompany,
+            originalEmail: editingEmail,
+            newCompany: company,
+            newEmail: email
+          };
+
+          // Encrypt password if provided
+          if (password) {
+            data.encryptedPassword = encryptWithCredentials(password, company, email);
+          }
+        } else {
+          // For new entries, encrypt data before sending
+          const encryptedSeed = encryptWithCredentials(seed, company, email);
+          const secretHash = generateSecretHash(seed, company, email);
+          
+          data = {
+            isUpdate: false,
+            company,
+            email,
+            encryptedSeed: encryptedSeed,
+            secretHash: secretHash
+          };
+
+          // Encrypt password if provided
+          if (password) {
+            data.encryptedPassword = encryptWithCredentials(password, company, email);
+          }
+        }
+
+        google.script.run
+          .withSuccessHandler(response => {
+            if (response.success) {
+              showFeedbackPopup(response.message, 'success');
+
+              // Reset form to add mode
+              resetFormToAddMode();
+
+              // Refresh the codes list
+              loadCodesList();
+
+              // Only redirect to home for new entries, not updates
+              if (response.message.includes('saved securely')) {
+                document.getElementById('ok-button').textContent = 'Return to Home';
+
+                // Redirect home after a delay
+                setTimeout(() => {
+                  window.top.location.href = '<?= ScriptApp.getService().getUrl(); ?>';
+                }, 1000);
+              }
+            } else {
+              showFeedbackPopup('Error: ' + response.message, 'error');
+            }
+          })
+          .withFailureHandler(error => {
+            showFeedbackPopup('Error: ' + error.message, 'error');
+            console.error('Save failed:', error);
+          })
+          .saveSecret(data);
+      }
+
+    /**
+     * Save a new user
+     */
+    function saveNewUser() {
+      const userEmail = document.getElementById('user-email').value.trim();
+
+      if (!userEmail) {
+        showFeedbackPopup('User email is required.', 'error');
+        return;
+      }
+
+      // Simple email validation
+      if (!userEmail.includes('@') || !userEmail.includes('.')) {
+        showFeedbackPopup('Please enter a valid email address.', 'error');
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(response => {
+          if (response.success) {
+            showFeedbackPopup(response.message, 'success');
+            document.getElementById('user-email').value = ''; // Clear input
+            loadUsersList(); // Refresh the user list
+          } else {
+            showFeedbackPopup('Error: ' + response.message, 'error');
+          }
+        })
+        .withFailureHandler(error => {
+          showFeedbackPopup('Error: ' + error.message, 'error');
+          console.error('Save failed:', error);
+        })
+        .saveUser(userEmail);
+    }
+
+    /**
+     * Save a new user group
+     */
+    function saveNewUserGroup() {
+      const groupName = document.getElementById('group-name').value.trim();
+
+      if (!groupName) {
+        showFeedbackPopup('User group name is required.', 'error');
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(response => {
+          if (response.success) {
+            showFeedbackPopup(response.message, 'success');
+            document.getElementById('group-name').value = ''; // Clear input
+            loadUsersList(); // Refresh the user/group list
+          } else {
+            showFeedbackPopup('Error: ' + response.message, 'error');
+          }
+        })
+        .withFailureHandler(error => {
+          showFeedbackPopup('Error: ' + error.message, 'error');
+          console.error('Save user group failed:', error);
+        })
+        .saveUserGroup(groupName);
+    }
+
+    /**
+     * Load users and groups into the select dropdown
+     */
+    function loadUsersList() {
+      google.script.run
+        .withSuccessHandler(data => {
+          const { users, userGroups } = data;
+          const select = document.getElementById('user-select');
+          
+          // Clear existing options except the first one
+          select.innerHTML = '<option value="">-- Select a user or group --</option>';
+          
+          
+          
+          // Add individual users
+          if (users && Object.keys(users).length > 0) {
+            const userOptGroup = document.createElement('optgroup');
+            userOptGroup.label = 'Users';
+            
+            Object.keys(users).forEach(userEmail => {
+              const option = document.createElement('option');
+              option.value = userEmail;
+              option.textContent = `${userEmail.replace('@startupbootcamp.com.au', '')}`;
+              userOptGroup.appendChild(option);
+            });
+            
+            select.appendChild(userOptGroup);
+          }
+
+          // Add user groups last
+          if (userGroups && Object.keys(userGroups).length > 0) {
+            const groupOptGroup = document.createElement('optgroup');
+            groupOptGroup.label = 'User Groups';
+            
+            // Sort groups to put DEFAULT first
+            const sortedGroups = Object.keys(userGroups).sort((a, b) => {
+              if (a === 'DEFAULT') return -1;
+              if (b === 'DEFAULT') return 1;
+              return a.localeCompare(b);
+            });
+            
+            sortedGroups.forEach(groupName => {
+              const option = document.createElement('option');
+              option.value = `GROUP:${groupName}`;
+              option.textContent = `${groupName}`;
+              groupOptGroup.appendChild(option);
+            });
+            
+            select.appendChild(groupOptGroup);
+          }
+        })
+        .withFailureHandler(error => {
+          console.error('Error loading users and groups:', error);
+          showFeedbackPopup('Error loading users and groups list.', 'error');
+        })
+        .getUsersAndGroups();
+    }
+
+    /**
+     * Load permissions for selected user or group
+     */
+    function loadUserPermissions() {
+      const selectedValue = document.getElementById('user-select').value;
+      const permissionsContainer = document.getElementById('user-permissions-container');
+      
+      if (!selectedValue) {
+        permissionsContainer.style.display = 'none';
+        return;
+      }
+      
+      // Show loading message immediately
+      permissionsContainer.style.display = 'block';
+      permissionsContainer.innerHTML = '<p style="text-align: center; color: #666; font-style: italic; padding: 20px;">Fetching current status...</p>';
+      
+      const isGroup = selectedValue.startsWith('GROUP:');
+      const identifier = isGroup ? selectedValue.substring(6) : selectedValue; // Remove 'GROUP:' prefix
+      
+      google.script.run
+        .withSuccessHandler(data => {
+          const { users, userGroups, secrets } = data;
+          let permissions;
+          
+          if (isGroup) {
+            permissions = userGroups[identifier];
+            if (!permissions) {
+              showFeedbackPopup('User group permissions not found.', 'error');
+              permissionsContainer.style.display = 'none';
+              return;
+            }
+          } else {
+            permissions = users[identifier];
+            if (!permissions) {
+              showFeedbackPopup('User permissions not found.', 'error');
+              permissionsContainer.style.display = 'none';
+              return;
+            }
+          }
+          
+          // Clear loading message and restore original structure
+          permissionsContainer.innerHTML = `
+            <div style="margin-bottom: 16px; display: flex; gap: 16px; flex-wrap: wrap;">
+              <div id="user-groups-container" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <!-- User group radios will be populated here -->
+              </div>
+            </div>
+            
+            <h4 class='mini-header'>Card Permissions:</h4>
+            <div id="card-permissions-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #E8F5F8; padding: 12px; border-radius: 4px;">
+              <!-- Card permissions will be populated here -->
+            </div>
+            
+            <div class="form-actions">
+              <button class="button-primary" onclick="saveUserPermissions()">Save Permissions</button>
+              <button class="secondary" onclick="removeSelectedUser()">Remove User</button>
+            </div>
+          `;
+
+          // Load user groups (only for users, not for groups themselves)
+          loadUserGroups(userGroups, permissions.isAdmin ? 'ADMIN' : permissions.userGroup, isGroup);
+          
+          // Load card permissions
+          loadCardPermissions(secrets, permissions.cardPermissions, permissions.isAdmin, permissions.userGroup, userGroups);
+          
+          // Apply admin permissions toggle after loading
+          toggleAdminPermissions();
+        })
+        .withFailureHandler(error => {
+          console.error('Error loading permissions:', error);
+          showFeedbackPopup('Error loading permissions.', 'error');
+          permissionsContainer.style.display = 'none';
+        })
+        .getUserPerms();
+    }
+
+    /**
+     * Load user groups checkboxes (only for individual users)
+     */
+    function loadUserGroups(userGroups, currentUserGroup, isGroup) {
+      const container = document.getElementById('user-groups-container');
+      container.innerHTML = '';
+      
+      // Don't show user groups for group management
+      if (isGroup) 
+        return;
+      
+      if (!userGroups || Object.keys(userGroups).length === 0)
+        return;
+      
+      // Add "Admin" option first
+      const adminLabel = document.createElement('label');
+      adminLabel.style.display = 'flex';
+      adminLabel.style.alignItems = 'center';
+      adminLabel.style.gap = '8px';
+
+      const adminRadio = document.createElement('input');
+      adminRadio.type = 'radio';
+      adminRadio.name = 'userGroup';
+      adminRadio.value = 'ADMIN';
+      adminRadio.checked = currentUserGroup === 'ADMIN';
+      adminRadio.onchange = toggleAdminPermissions;
+
+      const adminText = document.createTextNode('ADMIN');
+
+      adminLabel.appendChild(adminRadio);
+      adminLabel.appendChild(adminText);
+      container.appendChild(adminLabel);
+
+      // Create radio buttons for each user group
+      Object.keys(userGroups).forEach(groupName => {
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '8px';
+        
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'userGroup';
+        radio.value = groupName;
+        radio.checked = currentUserGroup === groupName;
+        radio.onchange = toggleAdminPermissions;
+        
+        const text = document.createTextNode(groupName);
+        
+        label.appendChild(radio);
+        label.appendChild(text);
+        container.appendChild(label);
+      });
+      
+      // Add "None" option
+      const noneLabel = document.createElement('label');
+      noneLabel.style.display = 'flex';
+      noneLabel.style.alignItems = 'center';
+      noneLabel.style.gap = '8px';
+      
+      const noneRadio = document.createElement('input');
+      noneRadio.type = 'radio';
+      noneRadio.name = 'userGroup';
+      noneRadio.value = '';
+      noneRadio.checked = !currentUserGroup || currentUserGroup === '';
+      noneRadio.onchange = toggleAdminPermissions;
+      
+      const noneText = document.createTextNode('None');
+      
+      noneLabel.appendChild(noneRadio);
+      noneLabel.appendChild(noneText);
+      container.appendChild(noneLabel);
+    }
+
+    /**
+     * Load card permissions checkboxes
+     */
+    function loadCardPermissions(secrets, cardPermissions, isAdmin, userGroup, userGroups) {
+      const container = document.getElementById('card-permissions-container');
+      container.innerHTML = '';
+      
+      if (!secrets || secrets.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">No cards available.</p>';
+        return;
+      }
+      
+      // Get group permissions if user is part of a group, or use DEFAULT
+      let groupPermissions = {};
+      let groupName = userGroup;
+      if (userGroup && userGroups && userGroups[userGroup]) {
+        groupPermissions = userGroups[userGroup].cardPermissions || {};
+      } else if (!userGroup && userGroups && userGroups['DEFAULT']) {
+        // Use DEFAULT permissions if user has no group
+        groupPermissions = userGroups['DEFAULT'].cardPermissions || {};
+        groupName = 'DEFAULT';
+      }
+      
+      secrets.forEach(secret => {
+        const cardId = `${secret.company}-${secret.email}`;
+        const hasGroupPermission = groupPermissions[cardId];
+        const hasIndividualPermission = cardPermissions[cardId];
+        const isChecked = isAdmin || hasIndividualPermission;
+        
+        const checkboxDiv = document.createElement('div');
+        checkboxDiv.style.marginBottom = '8px';
+        
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '8px';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `card-${cardId}`;
+        checkbox.checked = isChecked;
+        checkbox.disabled = isAdmin;
+        
+        // Add visual indicator for group permissions
+        let displayText = `${secret.company} (${secret.email})`;
+        if (hasGroupPermission && !hasIndividualPermission) {
+          if (groupName === 'DEFAULT') 
+            checkbox.style.backgroundColor = '#FFF8E1'; 
+         else 
+            checkbox.style.backgroundColor = '#E8F5F8';
+        }
+        
+        const text = document.createTextNode(displayText);
+        
+        label.appendChild(checkbox);
+        label.appendChild(text);
+        checkboxDiv.appendChild(label);
+        container.appendChild(checkboxDiv);
+      });
+    }
+
+    /**
+     * Toggle admin permissions
+     */
+    function toggleAdminPermissions() {
+      const selectedGroupRadio = document.querySelector('input[name="userGroup"]:checked');
+      const isAdmin = selectedGroupRadio && selectedGroupRadio.value === 'ADMIN';
+      const cardCheckboxes = document.querySelectorAll('#card-permissions-container input[type="checkbox"]');
+      
+      cardCheckboxes.forEach(checkbox => {
+        checkbox.disabled = isAdmin;
+        if (isAdmin) {
+          checkbox.checked = true;
+        }
+      });
+    }
+
+    /**
+     * Save user or group permissions
+     */
+    function saveUserPermissions() {
+      const selectedValue = document.getElementById('user-select').value;
+      if (!selectedValue) {
+        showFeedbackPopup('No user or group selected.', 'error');
+        return;
+      }
+      
+      const isGroup = selectedValue.startsWith('GROUP:');
+      const identifier = isGroup ? selectedValue.substring(6) : selectedValue;
+      
+      // Get admin status and user group from radio selection
+      const selectedGroupRadio = document.querySelector('input[name="userGroup"]:checked');
+      const selectedGroup = selectedGroupRadio ? selectedGroupRadio.value : '';
+      const isAdmin = selectedGroup === 'ADMIN';
+      
+      const cardPermissions = {};
+      
+      // Collect card permissions
+      const cardCheckboxes = document.querySelectorAll('#card-permissions-container input[type="checkbox"]');
+      cardCheckboxes.forEach(checkbox => {
+        const cardId = checkbox.id.replace('card-', '');
+        cardPermissions[cardId] = checkbox.checked;
+      });
+      
+      const permissions = {
+        isAdmin: isAdmin,
+        cardPermissions: cardPermissions
+      };
+      
+      // Add user group for individual users (not for groups themselves)
+      if (!isGroup) {
+        // Set userGroup to empty string if admin, otherwise use selected group
+        permissions.userGroup = isAdmin ? '' : selectedGroup;
+      }
+      
+      google.script.run
+        .withSuccessHandler(response => {
+          if (response.success) {
+            showFeedbackPopup(response.message, 'success');
+          } else {
+            showFeedbackPopup('Error: ' + response.message, 'error');
+          }
+        })
+        .withFailureHandler(error => {
+          showFeedbackPopup('Error: ' + error.message, 'error');
+          console.error('Save permissions failed:', error);
+        })
+        .updateUserPermissions(identifier, permissions, isGroup);
+    }
+
+    /**
+     * Remove selected user or group
+     */
+    function removeSelectedUser() {
+      const selectedValue = document.getElementById('user-select').value;
+      if (!selectedValue) {
+        showFeedbackPopup('No user or group selected.', 'error');
+        return;
+      }
+      
+      const isGroup = selectedValue.startsWith('GROUP:');
+      const identifier = isGroup ? selectedValue.substring(6) : selectedValue;
+      const displayName = isGroup ? identifier : identifier.replace('@startupbootcamp.com.au', '');
+      const itemType = isGroup ? 'user group' : 'user';
+      
+      // Prevent deletion of DEFAULT or ADMIN group
+      if (isGroup && (identifier === 'DEFAULT' || identifier === 'ADMIN')) {
+        showFeedbackPopup('The ' + identifier + ' group cannot be removed as it is required for system permissions.', 'error');
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to remove the ${itemType} "${displayName}"?`)) 
+        return;
+      
+      google.script.run
+        .withSuccessHandler(response => {
+          if (response.success) {
+            showFeedbackPopup(response.message, 'success');
+            // Reset the form
+            document.getElementById('user-select').value = '';
+            document.getElementById('user-permissions-container').style.display = 'none';
+            loadUsersList(); // Refresh the list
+          } else {
+            showFeedbackPopup('Error: ' + response.message, 'error');
+          }
+        })
+        .withFailureHandler(error => {
+          showFeedbackPopup('Error: ' + error.message, 'error');
+          console.error('Remove failed:', error);
+        })
+        .removeUser(identifier, isGroup);
+    }      /**
+       * Show feedback popup with message
+       */
+      function showFeedbackPopup(message, type = 'info') {
+        const popup = document.getElementById('feedback-popup');
+        const overlay = document.getElementById('feedback-overlay');
+        const messageDiv = document.getElementById('feedback-message');
+
+        messageDiv.textContent = message;
+        messageDiv.style.color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#30454A';
+
+        overlay.style.display = 'block';
+        popup.style.display = 'block';
+      }
+
+      /**
+       * Hide feedback popup
+       */
+      function hideFeedbackPopup() {
+        document.getElementById('feedback-overlay').style.display = 'none';
+        document.getElementById('feedback-popup').style.display = 'none';
+      }
+
+    /**
+     * Load admin list when page loads
+     */
+    window.addEventListener('load', function() {
+      loadUsersList();
+      loadCodesList();
+    });
+
+      /**
+       * Load and display the current 2FA codes list as pills
+       */
+      function loadCodesList() {
+        const container = document.getElementById('codes-list-container');
+        
+        // Show initial loading message
+        container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic; margin: 0;">Loading secrets...</p>';
+        
+        // After 1 second, change to checking permissions
+        setTimeout(() => {
+          container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic; margin: 0;">Checking permissions...</p>';
+        }, 1000);
+        
+        google.script.run
+          .withSuccessHandler(secrets => {
+            if (!secrets || secrets.length === 0) {
+              container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic; margin: 0;">No 2FA codes added yet.</p>';
+              return;
+            }
+
+            // Clear existing pills
+            container.innerHTML = '';
+
+            secrets.forEach(secret => {
+              addCodePill(secret.company, secret.email);
+            });
+          })
+          .withFailureHandler(error => {
+            console.error('Error loading codes list:', error);
+            container.innerHTML =
+              '<p style="text-align: center; color: #dc3545; margin: 0;">Error loading codes list.</p>';
+          })
+          .getSecretsData();
+      }
+
+      /**
+       * Add a code pill to the container
+       */
+      function addCodePill(company, email) {
+        const container = document.getElementById('codes-list-container');
+
+        // Create pill element
+        const pill = document.createElement('div');
+        pill.className = 'code-pill';
+        pill.dataset.company = company;
+        pill.dataset.email = email;
+        pill.textContent = company || 'Unknown Company';
+
+        // Make the pill clickable to populate form fields
+        pill.onclick = (e) => {
+          // Don't trigger if clicking the remove button
+          if (e.target.classList.contains('remove-pill')) {
+            return;
+          }
+          populateFormFields(company, email);
+        };
+
+        // Create remove button
+        const removeBtn = document.createElement('span');
+        removeBtn.className = 'remove-pill';
+        removeBtn.innerHTML = '×';
+        removeBtn.onclick = (e) => {
+          e.stopPropagation(); // Prevent triggering the pill click
+          removeSecret(company, email);
+        };
+
+        pill.appendChild(removeBtn);
+        container.appendChild(pill);
+      }
+
+      /**
+       * Populate form fields with existing secret data for editing
+       */
+      function populateFormFields(company, email) {
+        google.script.run
+          .withSuccessHandler(response => {
+            if (response.success) {
+              // Set edit mode
+              isEditMode = true;
+              editingCompany = company;
+              editingEmail = email;
+
+              // Populate the form fields
+              document.getElementById('company').value = response.company || '';
+              document.getElementById('email').value = response.email || '';
+              document.getElementById('password').value = response.password || '';
+              // Clear secret seed field - seed is immutable
+              document.getElementById('secretSeed').value = '';
+              document.getElementById('secretSeed').placeholder = 'Seed cannot be changed for existing entries';
+              document.getElementById('secretSeed').disabled = true;
+
+              document.getElementById('save-secret').textContent = 'Update Entry';
+              document.getElementById('cancel-edit').style.display = 'inline-block';
+
+              // Show feedback to user
+              showFeedbackPopup('Form populated with existing data. Seeds cannot be changed.', 'info');
+            } else {
+              showFeedbackPopup('Error: ' + response.message, 'error');
+            }
+          })
+          .withFailureHandler(error => {
+            showFeedbackPopup('Error loading data: ' + error.message, 'error');
+            console.error('Error loading secret for editing:', error);
+          })
+          .getSecretForEditing(company, email);
+      }
+
+      /**
+       * Reset form to add new entry mode
+       */
+      function resetFormToAddMode() {
+        isEditMode = false;
+        editingCompany = null;
+        editingEmail = null;
+
+        // Clear all fields
+        document.getElementById('company').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('secretSeed').value = '';
+
+        // Re-enable seed field
+        document.getElementById('secretSeed').disabled = false;
+        document.getElementById('secretSeed').placeholder = 'Enter secret provided on sign up';
+
+        // Reset button text
+        document.getElementById('save-secret').textContent = 'Save Secret';
+        document.getElementById('cancel-edit').style.display = 'none';
+      }
+
+      /**
+       * Remove a 2FA secret from the list
+       */
+      function removeSecret(company, email) {
+        const displayName = company || email || 'this entry';
+
+        if (!confirm(`Are you sure you want to remove the 2FA code for ${displayName}?`)) {
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(response => {
+            if (response.success) {
+              showFeedbackPopup(response.message, 'success');
+              // Remove the pill from the UI immediately
+              const pill = document.querySelector(`[data-company="${company}"][data-email="${email}"]`);
+              if (pill) {
+                pill.remove();
+              }
+              // Also reload the full list to ensure consistency
+              loadCodesList();
+            } else {
+              showFeedbackPopup('Error: ' + response.message, 'error');
+            }
+          })
+          .withFailureHandler(error => {
+            showFeedbackPopup('Error: ' + error.message, 'error');
+            console.error('Remove secret failed:', error);
+          })
+          .removeSecret(company, email);
+        
+      }
+    </script>
