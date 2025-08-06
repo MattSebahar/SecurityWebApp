@@ -244,7 +244,9 @@
             Object.keys(users).forEach(userEmail => {
               const option = document.createElement('option');
               option.value = userEmail;
-              option.textContent = `${userEmail.replace('@startupbootcamp.com.au', '')}`;
+              // Use name if available, otherwise fallback to email (stripped)
+              const displayName = users[userEmail].name || userEmail.replace('@startupbootcamp.com.au', '');
+              option.textContent = displayName;
               userOptGroup.appendChild(option);
             });
             
@@ -294,7 +296,7 @@
       
       // Show loading message immediately
       permissionsContainer.style.display = 'block';
-      permissionsContainer.innerHTML = '<p style="text-align: center; color: #666; font-style: italic; padding: 20px;">Fetching current status...</p>';
+      permissionsContainer.innerHTML = '<p class="loading-message">Fetching current status...</p>';
       
       const isGroup = selectedValue.startsWith('GROUP:');
       const identifier = isGroup ? selectedValue.substring(6) : selectedValue; // Remove 'GROUP:' prefix
@@ -322,22 +324,34 @@
           
           // Clear loading message and restore original structure
           permissionsContainer.innerHTML = `
-            <div style="margin-bottom: 16px; display: flex; gap: 16px; flex-wrap: wrap;">
-              <div id="user-groups-container" style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <!-- User Name Field -->
+            <div id="user-name-section" class="user-name-section" style="display: ${isGroup ? 'none' : 'block'};">
+              <h4 class='mini-header'>Display Name:</h4>
+              <input type="text" id="selected-user-name" class="user-name-input" placeholder="Enter display name" maxlength="50">
+              <button class="button-secondary-small" onclick="saveUserName()">Update Name</button>
+            </div>
+
+            <div class="user-groups-flex">
+              <div id="user-groups-container" class="user-groups-container">
                 <!-- User group radios will be populated here -->
               </div>
             </div>
             
             <h4 class='mini-header'>Card Permissions:</h4>
-            <div id="card-permissions-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #E8F5F8; padding: 12px; border-radius: 4px;">
+            <div id="card-permissions-container" class="card-permissions-container">
               <!-- Card permissions will be populated here -->
             </div>
             
             <div class="form-actions">
-              <button class="button-primary" onclick="saveUserPermissions()">Save Permissions</button>
+              <button onclick="saveUserPermissions()">Save Permissions</button>
               <button class="secondary" onclick="removeSelectedUser()">Remove User</button>
             </div>
           `;
+
+          // Load user name if it's a user (not a group)
+          if (!isGroup && permissions.name) {
+            document.getElementById('selected-user-name').value = permissions.name;
+          }
 
           // Load user groups (only for users, not for groups themselves)
           loadUserGroups(userGroups, permissions.isAdmin ? 'ADMIN' : permissions.userGroup, isGroup);
@@ -794,5 +808,39 @@
           })
           .removeSecret(company, email);
         
+      }
+
+      /**
+       * Save user name for the selected user
+       */
+      function saveUserName() {
+        const selectedValue = document.getElementById('user-select').value;
+        const newName = document.getElementById('selected-user-name').value.trim();
+        
+        if (!selectedValue || selectedValue.startsWith('GROUP:')) {
+          showFeedbackPopup('Please select a user to update their name.', 'error');
+          return;
+        }
+        
+        if (!newName) {
+          showFeedbackPopup('Please enter a valid name.', 'error');
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(result => {
+            if (result.success) {
+              showFeedbackPopup('User name updated successfully!', 'success');
+              // Reload the users list to reflect the name change in dropdown
+              loadUsersList();
+            } else {
+              showFeedbackPopup(result.message || 'Failed to update user name.', 'error');
+            }
+          })
+          .withFailureHandler(error => {
+            console.error('Error updating user name:', error);
+            showFeedbackPopup('Error updating user name. Please try again.', 'error');
+          })
+          .updateUserName(selectedValue, newName);
       }
     </script>

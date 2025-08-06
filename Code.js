@@ -22,6 +22,10 @@ const PROJECT_ID = 'secret-manager-466302';
  */
 function doGet(e) {
 
+  // Get the current user's email and auto-register if needed
+  const userEmail = Session.getActiveUser().getEmail();
+  autoRegisterUser(userEmail);
+
   // Check which page the user is directing for
   if (e.parameter.page === 'add') {
 
@@ -34,7 +38,6 @@ function doGet(e) {
         .setTitle('SBC Intern 2FA');
     
     // Check permissions before returning new page
-    const userEmail = Session.getActiveUser().getEmail();
     if (users[userEmail] && users[userEmail].isAdmin)
       return HtmlService.createTemplateFromFile('admin/add')
         .evaluate()

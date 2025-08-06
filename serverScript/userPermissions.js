@@ -9,6 +9,82 @@
  */
 
 /**
+ * Automatically registers a user if they don't exist in the system.
+ * @param {string} userEmail The email address of the user to auto-register.
+ * @returns {Object} An object indicating the success or failure of the operation.
+ */
+function autoRegisterUser(userEmail) {
+  if (!userEmail || typeof userEmail !== 'string') {
+    return { success: false, message: 'Invalid email provided.' };
+  }
+
+  try {
+    const existingUsersJSON = SCRIPT_PROPS.getProperty('USERS');
+    const users = existingUsersJSON ? JSON.parse(existingUsersJSON) : {};
+
+    // Check if user already exists
+    if (users[userEmail]) {
+      return { success: true, message: 'User already exists.', isNew: false };
+    }
+
+    // Extract name from email (part before @)
+    const defaultName = userEmail.split('@')[0];
+
+    // Auto-register the user with default permissions
+    users[userEmail] = {
+      name: defaultName,
+      isAdmin: false,
+      userGroup: 'DEFAULT', // Assign to DEFAULT group
+      cardPermissions: {}
+    };
+
+    // Save the updated users object
+    SCRIPT_PROPS.setProperty('USERS', JSON.stringify(users));
+
+    return { success: true, message: 'User auto-registered successfully.', isNew: true };
+  } catch (error) {
+    console.error('Error auto-registering user:', error);
+    return { success: false, message: 'Failed to auto-register user: ' + error.message };
+  }
+}
+
+/**
+ * Updates a user's name field.
+ * @param {string} userEmail The email address of the user.
+ * @param {string} newName The new name for the user.
+ * @returns {Object} An object indicating the success or failure of the operation.
+ */
+function updateUserName(userEmail, newName) {
+  if (!userEmail || typeof userEmail !== 'string') {
+    return { success: false, message: 'Invalid email provided.' };
+  }
+  
+  if (!newName || typeof newName !== 'string') {
+    return { success: false, message: 'Invalid name provided.' };
+  }
+
+  try {
+    const existingUsersJSON = SCRIPT_PROPS.getProperty('USERS');
+    const users = existingUsersJSON ? JSON.parse(existingUsersJSON) : {};
+
+    if (!users[userEmail]) {
+      return { success: false, message: 'User not found.' };
+    }
+
+    // Update only the name field
+    users[userEmail].name = newName.trim();
+
+    // Save the updated users object
+    SCRIPT_PROPS.setProperty('USERS', JSON.stringify(users));
+
+    return { success: true, message: 'User name updated successfully.' };
+  } catch (error) {
+    console.error('Error updating user name:', error);
+    return { success: false, message: 'Failed to update user name: ' + error.message };
+  }
+}
+
+/**
  * Updates user or group permissions.
  * @param {string} email The email address of the user or group name.
  * @param {Object} permissions The permissions object with isAdmin and cardPermissions.
