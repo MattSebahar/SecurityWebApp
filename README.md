@@ -2,7 +2,6 @@
 
 A 2FA and password management system powered by Google Apps Script and Google Cloud. Used both personally and professionally to store emails, passowords, and 2FA codes. Passwords are optional as best practice would be to keep them seporate, but due to request were added. 
 
----
 
 ## Table of Contents
 - [Overview](#overview)
@@ -13,13 +12,11 @@ A 2FA and password management system powered by Google Apps Script and Google Cl
 - [Project Structure](#project-structure)
 - [Security Functions](#security-functions)
 
----
 
 ## Overview
 
 This app provides a secure, cloud-based solution for managing 2FA codes and passwords. Leveraging Google Apps Script for hosting, Google Cloud for secure key management, and a custom HTML/CSS/JS frontend for a smooth user experience.
 
----
 
 ## Features
 
@@ -30,7 +27,6 @@ This app provides a secure, cloud-based solution for managing 2FA codes and pass
 - **Custom UI:** Responsive, user-friendly interface for both end-users and admins.
 - **Audit & Security:** All sensitive operations are double-encrypted and never exposed in plaintext. A backup uneditable by the UI is kept within the script properites for accidental deletions.
 
----
 
 ## Getting Started
 
@@ -59,7 +55,6 @@ This app provides a secure, cloud-based solution for managing 2FA codes and pass
 - Set "Who has access" to "Anyone" or "Anyone with the link" as needed.
 - Deploy and copy the web app URL.
 
----
 
 ## Google Cloud Setup
 
@@ -80,7 +75,6 @@ This app provides a secure, cloud-based solution for managing 2FA codes and pass
    - Create a service account with access to Secret Manager.
    - Generate a JSON key and add it to your Apps Script project as a script property (`SERVICE_ACCOUNT_KEY`).
 
----
 
 ## Project Structure
 
@@ -103,7 +97,6 @@ SecurityWebApp/
 - **secretEncryptions.js**: Sensitive encryption logic (excluded from repo for security).
 - **style.html**: Shared CSS for consistent look and feel.
 
----
 
 ## Security Functions
 
@@ -113,31 +106,34 @@ SecurityWebApp/
 ```js
 /**
  * Generate encryption key from company and email
- * function generateEncryptionKey(company, email)
  */
+function generateEncryptionKey(company, email)
 
 /**
  * Encrypt text using company and email as key components
- * function encryptWithCredentials(text, company, email)
  */
+function encryptWithCredentials(text, company, email)
 
 /**
  * Decrypt text using company and email as key components
- * function decryptWithCredentials(encryptedText, company, email)
  */
+function decryptWithCredentials(encryptedText, company, email)
 
 /**
  * Generate a hash for secret validation
- * function generateSecretHash(seed, company, email)
  */
+function generateSecretHash(seed, company, email)
+ 
 
 /**
- * Encrypts data with the master key.
- * function encryptWithMasterKey(data)
+ *Encrypts data with the master key.
  */
+function encryptWithMasterKey(data)
+
 
 /**
  * Decrypts data with the master key.
- * function decryptWithMasterKey(encryptedData)
  */
+ function decryptWithMasterKey(encryptedData)
+
 ```
