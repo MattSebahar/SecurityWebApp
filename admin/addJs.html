@@ -287,14 +287,14 @@
           // Clear loading message and restore original structure
           permissionsContainer.innerHTML = `
             <!-- User Name Field (for users only) -->
-            <div id="user-name-section" class="user-name-section" style="display: ${isGroup ? 'none' : 'block'};">
+            <div id="user-name-section" class="user-name-section" style="display: ${isGroup ? 'none' : 'block'}; margin-top: 10px;">
               <h4 class='mini-header'>Display Name:</h4>
               <input type="text" id="selected-user-name" class="user-name-input" placeholder="Enter display name" maxlength="50">
               <button class="button-secondary-small" onclick="saveUserName()">Update Name</button>
             </div>
 
             <!-- Group Members List (for groups only) -->
-            <div id="group-members-section" class="group-members-section" style="display: ${isGroup ? 'block' : 'none'};">
+            <div id="group-members-section" class="group-members-section" style="display: ${isGroup ? 'block' : 'none'}; margin-top: 10px;">
               <h4 class='mini-header'>Group Members:</h4>
               <div id="group-members-list" class="group-members-list">
                 <!-- Group members will be populated here -->
@@ -334,8 +334,15 @@
           // Load card permissions
           loadCardPermissions(secrets, permissions.cardPermissions, permissions.isAdmin, permissions.userGroup, userGroups, isGroup);
           
-          // Apply admin permissions toggle after loading
-          toggleAdminPermissions();
+          // For initial load, just update admin state without triggering group reload
+          if (!isGroup && permissions.isAdmin) {
+            const cardCheckboxes = document.querySelectorAll('#card-permissions-container input[type="checkbox"]');
+            cardCheckboxes.forEach(checkbox => {
+              checkbox.checked = true;
+              checkbox.disabled = true;
+              checkbox.style.backgroundColor = '';
+            });
+          }
         })
         .withFailureHandler(error => {
           console.error('Error loading permissions:', error);
@@ -511,6 +518,9 @@
           } else {
             checkbox.style.backgroundColor = '#E8F5F8';
           }
+        } else {
+          // Clear any background styling for groups or individual permissions
+          checkbox.style.backgroundColor = '';
         }
         
         const text = document.createTextNode(displayText);
@@ -529,16 +539,62 @@
       const selectedGroupRadio = document.querySelector('input[name="userGroup"]:checked');
       const selectedGroup = selectedGroupRadio ? selectedGroupRadio.value : '';
       const isAdmin = selectedGroup === 'ADMIN';
+      const selectedValue = document.getElementById('user-select').value;
+      const isGroup = selectedValue.startsWith('GROUP:');
+      
+      // Don't trigger for group management - groups don't have radio buttons
+      if (isGroup) {
+        return;
+      }
+      
+      // Show loading message immediately
+      const container = document.getElementById('card-permissions-container');
+      container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic; margin: 20px 0;">Gathering Permissions...</p>';
       
       // If admin is selected, check and disable all checkboxes
       if (isAdmin) {
-        const cardCheckboxes = document.querySelectorAll('#card-permissions-container input[type="checkbox"]');
-        cardCheckboxes.forEach(checkbox => {
-          checkbox.checked = true;
-          checkbox.disabled = true;
-          // Clear any group styling
-          checkbox.style.backgroundColor = '';
-        });
+        // Small delay to show the loading message
+        setTimeout(() => {
+          // Reload the full UI to get fresh checkboxes
+          google.script.run
+            .withSuccessHandler(data => {
+              const { secrets } = data;
+              
+              // Clear container and rebuild checkboxes
+              container.innerHTML = '';
+              
+              secrets.forEach(secret => {
+                const cardId = `${secret.company}-${secret.email}`;
+                
+                const checkboxDiv = document.createElement('div');
+                checkboxDiv.style.marginBottom = '8px';
+                
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '8px';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `card-${cardId}`;
+                checkbox.checked = true;
+                checkbox.disabled = true;
+                checkbox.style.backgroundColor = '';
+                
+                const text = document.createTextNode(`${secret.company} (${secret.email})`);
+                
+                label.appendChild(checkbox);
+                label.appendChild(text);
+                checkboxDiv.appendChild(label);
+                container.appendChild(checkboxDiv);
+              });
+            })
+            .withFailureHandler(error => {
+              console.error('Error reloading permissions:', error);
+              container.innerHTML = '<p style="text-align: center; color: #dc3545; margin: 20px 0;">Error loading permissions.</p>';
+            })
+            .getUserPerms();
+        }, 100);
         return;
       }
       
@@ -546,8 +602,6 @@
       google.script.run
         .withSuccessHandler(data => {
           const { userGroups, secrets } = data;
-          const selectedValue = document.getElementById('user-select').value;
-          const isGroup = selectedValue.startsWith('GROUP:');
           
           // Get the selected group's permissions (or DEFAULT if no group selected)
           let targetGroupPermissions = {};
@@ -557,39 +611,39 @@
             targetGroupPermissions = userGroups['DEFAULT'].cardPermissions || {};
           }
           
-          // Update checkboxes based ONLY on the selected group's permissions
+          // Clear container and rebuild checkboxes
+          container.innerHTML = '';
+          
           secrets.forEach(secret => {
             const cardId = `${secret.company}-${secret.email}`;
-            const checkbox = document.getElementById(`card-${cardId}`);
             const hasGroupPermission = targetGroupPermissions[cardId];
             
-            if (checkbox) {
-              if (hasGroupPermission) {
-                // Group has permission: check and disable
-                checkbox.checked = true;
-                checkbox.disabled = true;
-                checkbox.style.backgroundColor = selectedGroup === 'DEFAULT' ? '#FFF8E1' : '#E8F5F8';
-              } else {
-                // Group doesn't have permission: uncheck and enable
-                checkbox.checked = false;
-                checkbox.disabled = false;
-                checkbox.style.backgroundColor = '';
-              }
-            }
-          });
-          
-          // Update display text to show group source
-          const labels = document.querySelectorAll('#card-permissions-container label');
-          labels.forEach(label => {
-            const text = label.childNodes[1];
-            if (text && text.nodeType === Node.TEXT_NODE) {
-              const originalText = text.textContent.replace(/ \(from .+ group\)/, '');
-              text.textContent = originalText;
-            }
+            const checkboxDiv = document.createElement('div');
+            checkboxDiv.style.marginBottom = '8px';
+            
+            const label = document.createElement('label');
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.gap = '8px';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `card-${cardId}`;
+            checkbox.checked = hasGroupPermission || false;
+            checkbox.disabled = hasGroupPermission || false;
+            checkbox.style.backgroundColor = hasGroupPermission ? (selectedGroup === 'DEFAULT' ? '#FFF8E1' : '#E8F5F8') : '';
+            
+            const text = document.createTextNode(`${secret.company} (${secret.email})`);
+            
+            label.appendChild(checkbox);
+            label.appendChild(text);
+            checkboxDiv.appendChild(label);
+            container.appendChild(checkboxDiv);
           });
         })
         .withFailureHandler(error => {
           console.error('Error reloading permissions:', error);
+          container.innerHTML = '<p style="text-align: center; color: #dc3545; margin: 20px 0;">Error loading permissions.</p>';
         })
         .getUserPerms();
     }
