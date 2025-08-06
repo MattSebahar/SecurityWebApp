@@ -8,4 +8,5 @@
 node_modules/
 
 # Ignore encyptions for security
-serverScript/secretEncryptions.html
+serverScript/frontendEncryptions.html
+serverScript/backendEncryptions.js

@@ -19,13 +19,12 @@
      */
       function handleQrCodeFile(event) {
         const file = event.target.files[0];
-        const statusDiv = document.getElementById('qr-status');
+        
         if (!file) {
           return;
         }
 
-        statusDiv.textContent = 'Processing image...';
-        statusDiv.style.color = '#666';
+        
         const reader = new FileReader();
 
         reader.onload = function (e) {
@@ -50,19 +49,16 @@
                   document.getElementById('secretSeed').value = secret;
                   document.getElementById('company').value = issuer || '';
                   document.getElementById('email').value = account || '';
-                  statusDiv.textContent = 'QR Code decoded successfully!';
-                  statusDiv.style.color = '#28a745';
+                  showFeedbackPopup('QR Code decoded successfully!', 'success');
                 } else {
                   throw new Error("'secret' parameter not found in QR code.");
                 }
               } catch (err) {
                 console.error("Error parsing QR code URL:", err);
-                statusDiv.textContent = 'Error: Invalid QR code format.';
-                statusDiv.style.color = '#dc3545';
+                showFeedbackPopup('Error: Invalid QR code format.', 'error');
               }
             } else {
-              statusDiv.textContent = 'Error: No QR code found in image.';
-              statusDiv.style.color = '#dc3545';
+              showFeedbackPopup('Error: No QR code found in image.', 'error');
             }
           };
           img.src = e.target.result;
@@ -159,40 +155,6 @@
           })
           .saveSecret(data);
       }
-
-    /**
-     * Save a new user
-     */
-    function saveNewUser() {
-      const userEmail = document.getElementById('user-email').value.trim();
-
-      if (!userEmail) {
-        showFeedbackPopup('User email is required.', 'error');
-        return;
-      }
-
-      // Simple email validation
-      if (!userEmail.includes('@') || !userEmail.includes('.')) {
-        showFeedbackPopup('Please enter a valid email address.', 'error');
-        return;
-      }
-
-      google.script.run
-        .withSuccessHandler(response => {
-          if (response.success) {
-            showFeedbackPopup(response.message, 'success');
-            document.getElementById('user-email').value = ''; // Clear input
-            loadUsersList(); // Refresh the user list
-          } else {
-            showFeedbackPopup('Error: ' + response.message, 'error');
-          }
-        })
-        .withFailureHandler(error => {
-          showFeedbackPopup('Error: ' + error.message, 'error');
-          console.error('Save failed:', error);
-        })
-        .saveUser(userEmail);
-    }
 
     /**
      * Save a new user group
@@ -324,11 +286,19 @@
           
           // Clear loading message and restore original structure
           permissionsContainer.innerHTML = `
-            <!-- User Name Field -->
+            <!-- User Name Field (for users only) -->
             <div id="user-name-section" class="user-name-section" style="display: ${isGroup ? 'none' : 'block'};">
               <h4 class='mini-header'>Display Name:</h4>
               <input type="text" id="selected-user-name" class="user-name-input" placeholder="Enter display name" maxlength="50">
               <button class="button-secondary-small" onclick="saveUserName()">Update Name</button>
+            </div>
+
+            <!-- Group Members List (for groups only) -->
+            <div id="group-members-section" class="group-members-section" style="display: ${isGroup ? 'block' : 'none'};">
+              <h4 class='mini-header'>Group Members:</h4>
+              <div id="group-members-list" class="group-members-list">
+                <!-- Group members will be populated here -->
+              </div>
             </div>
 
             <div class="user-groups-flex">
@@ -344,7 +314,7 @@
             
             <div class="form-actions">
               <button onclick="saveUserPermissions()">Save Permissions</button>
-              <button class="secondary" onclick="removeSelectedUser()">Remove User</button>
+              <button class="secondary" id="remove-button" onclick="removeSelectedUser()">${isGroup ? 'Remove Group' : 'Remove User'}</button>
             </div>
           `;
 
@@ -353,11 +323,16 @@
             document.getElementById('selected-user-name').value = permissions.name;
           }
 
+          // Load group members if it's a group
+          if (isGroup) {
+            loadGroupMembers(users, identifier);
+          }
+
           // Load user groups (only for users, not for groups themselves)
           loadUserGroups(userGroups, permissions.isAdmin ? 'ADMIN' : permissions.userGroup, isGroup);
           
           // Load card permissions
-          loadCardPermissions(secrets, permissions.cardPermissions, permissions.isAdmin, permissions.userGroup, userGroups);
+          loadCardPermissions(secrets, permissions.cardPermissions, permissions.isAdmin, permissions.userGroup, userGroups, isGroup);
           
           // Apply admin permissions toggle after loading
           toggleAdminPermissions();
@@ -368,6 +343,45 @@
           permissionsContainer.style.display = 'none';
         })
         .getUserPerms();
+    }
+
+    /**
+     * Load group members list (only for groups)
+     */
+    function loadGroupMembers(users, groupName) {
+      const container = document.getElementById('group-members-list');
+      container.innerHTML = '';
+      
+      if (!users || Object.keys(users).length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">No members in this group.</p>';
+        return;
+      }
+      
+      // Find users that belong to this group
+      const groupMembers = Object.keys(users).filter(userEmail => {
+        const user = users[userEmail];
+        return user.userGroup === groupName;
+      });
+      
+      if (groupMembers.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">No members in this group.</p>';
+        return;
+      }
+      
+      groupMembers.forEach(userEmail => {
+        const user = users[userEmail];
+        const memberDiv = document.createElement('div');
+        memberDiv.style.marginBottom = '4px';
+        memberDiv.style.padding = '4px 8px';
+        memberDiv.style.backgroundColor = '#f8f9fa';
+        memberDiv.style.borderRadius = '4px';
+        memberDiv.style.fontSize = '14px';
+        
+        const displayName = user.name || userEmail.replace('@startupbootcamp.com.au', '');
+        memberDiv.textContent = `${displayName} (${userEmail})`;
+        
+        container.appendChild(memberDiv);
+      });
     }
 
     /**
@@ -423,31 +437,12 @@
         label.appendChild(text);
         container.appendChild(label);
       });
-      
-      // Add "None" option
-      const noneLabel = document.createElement('label');
-      noneLabel.style.display = 'flex';
-      noneLabel.style.alignItems = 'center';
-      noneLabel.style.gap = '8px';
-      
-      const noneRadio = document.createElement('input');
-      noneRadio.type = 'radio';
-      noneRadio.name = 'userGroup';
-      noneRadio.value = '';
-      noneRadio.checked = !currentUserGroup || currentUserGroup === '';
-      noneRadio.onchange = toggleAdminPermissions;
-      
-      const noneText = document.createTextNode('None');
-      
-      noneLabel.appendChild(noneRadio);
-      noneLabel.appendChild(noneText);
-      container.appendChild(noneLabel);
     }
 
     /**
      * Load card permissions checkboxes
      */
-    function loadCardPermissions(secrets, cardPermissions, isAdmin, userGroup, userGroups) {
+    function loadCardPermissions(secrets, cardPermissions, isAdmin, userGroup, userGroups, isGroup = false, showOnlyGroupPermissions = false) {
       const container = document.getElementById('card-permissions-container');
       container.innerHTML = '';
       
@@ -471,7 +466,28 @@
         const cardId = `${secret.company}-${secret.email}`;
         const hasGroupPermission = groupPermissions[cardId];
         const hasIndividualPermission = cardPermissions[cardId];
-        const isChecked = isAdmin || hasIndividualPermission;
+        
+        let isChecked, isDisabled;
+        
+        if (isGroup) {
+          // For groups: show current group permissions, all enabled
+          isChecked = hasIndividualPermission || false;
+          isDisabled = false;
+        } else if (showOnlyGroupPermissions) {
+          // Show only group permissions (used when radio button changes)
+          isChecked = hasGroupPermission || false;
+          isDisabled = hasGroupPermission || false;
+        } else {
+          // For users: check if admin or has individual permission
+          isChecked = isAdmin || hasIndividualPermission;
+          isDisabled = isAdmin;
+          
+          // If user has group permission, check and disable that checkbox
+          if (hasGroupPermission) {
+            isChecked = true;
+            isDisabled = true;
+          }
+        }
         
         const checkboxDiv = document.createElement('div');
         checkboxDiv.style.marginBottom = '8px';
@@ -485,15 +501,16 @@
         checkbox.type = 'checkbox';
         checkbox.id = `card-${cardId}`;
         checkbox.checked = isChecked;
-        checkbox.disabled = isAdmin;
+        checkbox.disabled = isDisabled;
         
         // Add visual indicator for group permissions
         let displayText = `${secret.company} (${secret.email})`;
-        if (hasGroupPermission && !hasIndividualPermission) {
-          if (groupName === 'DEFAULT') 
-            checkbox.style.backgroundColor = '#FFF8E1'; 
-         else 
+        if (!isGroup && hasGroupPermission && (showOnlyGroupPermissions || !hasIndividualPermission)) {
+          if (groupName === 'DEFAULT') {
+            checkbox.style.backgroundColor = '#FFF8E1';
+          } else {
             checkbox.style.backgroundColor = '#E8F5F8';
+          }
         }
         
         const text = document.createTextNode(displayText);
@@ -506,19 +523,75 @@
     }
 
     /**
-     * Toggle admin permissions
+     * Toggle admin permissions and update card permissions based on selected group
      */
     function toggleAdminPermissions() {
       const selectedGroupRadio = document.querySelector('input[name="userGroup"]:checked');
-      const isAdmin = selectedGroupRadio && selectedGroupRadio.value === 'ADMIN';
-      const cardCheckboxes = document.querySelectorAll('#card-permissions-container input[type="checkbox"]');
+      const selectedGroup = selectedGroupRadio ? selectedGroupRadio.value : '';
+      const isAdmin = selectedGroup === 'ADMIN';
       
-      cardCheckboxes.forEach(checkbox => {
-        checkbox.disabled = isAdmin;
-        if (isAdmin) {
+      // If admin is selected, check and disable all checkboxes
+      if (isAdmin) {
+        const cardCheckboxes = document.querySelectorAll('#card-permissions-container input[type="checkbox"]');
+        cardCheckboxes.forEach(checkbox => {
           checkbox.checked = true;
-        }
-      });
+          checkbox.disabled = true;
+          // Clear any group styling
+          checkbox.style.backgroundColor = '';
+        });
+        return;
+      }
+      
+      // For non-admin groups, reload permissions to reflect ONLY the new group's access
+      google.script.run
+        .withSuccessHandler(data => {
+          const { userGroups, secrets } = data;
+          const selectedValue = document.getElementById('user-select').value;
+          const isGroup = selectedValue.startsWith('GROUP:');
+          
+          // Get the selected group's permissions (or DEFAULT if no group selected)
+          let targetGroupPermissions = {};
+          if (selectedGroup && userGroups && userGroups[selectedGroup]) {
+            targetGroupPermissions = userGroups[selectedGroup].cardPermissions || {};
+          } else if (!selectedGroup && userGroups && userGroups['DEFAULT']) {
+            targetGroupPermissions = userGroups['DEFAULT'].cardPermissions || {};
+          }
+          
+          // Update checkboxes based ONLY on the selected group's permissions
+          secrets.forEach(secret => {
+            const cardId = `${secret.company}-${secret.email}`;
+            const checkbox = document.getElementById(`card-${cardId}`);
+            const hasGroupPermission = targetGroupPermissions[cardId];
+            
+            if (checkbox) {
+              if (hasGroupPermission) {
+                // Group has permission: check and disable
+                checkbox.checked = true;
+                checkbox.disabled = true;
+                checkbox.style.backgroundColor = selectedGroup === 'DEFAULT' ? '#FFF8E1' : '#E8F5F8';
+              } else {
+                // Group doesn't have permission: uncheck and enable
+                checkbox.checked = false;
+                checkbox.disabled = false;
+                checkbox.style.backgroundColor = '';
+              }
+            }
+          });
+          
+          // Update display text to show group source
+          const labels = document.querySelectorAll('#card-permissions-container label');
+          labels.forEach(label => {
+            const text = label.childNodes[1];
+            if (text && text.nodeType === Node.TEXT_NODE) {
+              const originalText = text.textContent.replace(/ \(from .+ group\)/, '');
+              text.textContent = originalText;
+            }
+          });
+        })
+        .withFailureHandler(error => {
+          console.error('Error reloading permissions:', error);
+        })
+        .getUserPerms();
     }
 
     /**
@@ -587,7 +660,7 @@
       const isGroup = selectedValue.startsWith('GROUP:');
       const identifier = isGroup ? selectedValue.substring(6) : selectedValue;
       const displayName = isGroup ? identifier : identifier.replace('@startupbootcamp.com.au', '');
-      const itemType = isGroup ? 'user group' : 'user';
+      const itemType = isGroup ? 'group' : 'user';
       
       // Prevent deletion of DEFAULT or ADMIN group
       if (isGroup && (identifier === 'DEFAULT' || identifier === 'ADMIN')) {

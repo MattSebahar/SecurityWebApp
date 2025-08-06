@@ -46,7 +46,6 @@
           <span>Scan QR</span>
         </label>
         <input type="file" id="file-input" accept="image/*" onchange="handleQrCodeFile(event)">
-        <div id="qr-status" style="position: absolute; top: 95px; right: 10px; font-size: 12px; text-align: center; width: 80px;"></div>
 
         <label for="company">Application Name:</label>
         <input type="text" id="company" placeholder="e.g., HubSpot, Airtable">
@@ -97,11 +96,19 @@
           <!-- User Permissions Container -->
           <div id="user-permissions-container" class="user-permissions-container">
             
-            <!-- User Name Field -->
+            <!-- User Name Field (for users only) -->
             <div id="user-name-section" class="user-name-section">
               <h4 class='mini-header'>Display Name:</h4>
               <input type="text" id="selected-user-name" class="user-name-input" placeholder="Enter display name" maxlength="50">
               <button class="button-secondary-small" onclick="saveUserName()">Update Name</button>
+            </div>
+
+            <!-- Group Members List (for groups only) -->
+            <div id="group-members-section" class="group-members-section" style="display: none;">
+              <h4 class='mini-header'>Group Members:</h4>
+              <div id="group-members-list" class="group-members-list">
+                <!-- Group members will be populated here -->
+              </div>
             </div>
 
             <div class="user-groups-flex">
@@ -117,17 +124,8 @@
             
             <div class="form-actions">
               <button onclick="saveUserPermissions()">Save Permissions</button>
-              <button class="secondary" onclick="removeSelectedUser()">Remove User</button>
+              <button class="secondary" id="remove-button" onclick="removeSelectedUser()">Remove User</button>
             </div>
-          </div>
-        </div>
-
-        <!-- Add New User -->
-        <div class="admin-entry-subsection" >
-          <h3 class='mini-header'>Add New User Email: </h3>
-          <input type="text" id="user-email" placeholder="e.g., user@startupbootcamp.com.au">
-          <div class="form-actions">
-            <button onclick="saveNewUser()">Add User</button>
           </div>
         </div>
 
@@ -155,9 +153,8 @@
     <?!=include('imports/crypto-js'); ?>
     <?!=include('imports/jsQR'); ?>
     <?!=include('admin/addJs'); ?>
-    <?!=include('serverScript/secretEncryptions'); ?>
+    <?!=include('serverScript/frontendEncryptions'); ?>
 
-  
 </body>
 
 </html>
