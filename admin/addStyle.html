@@ -342,46 +342,100 @@
       margin-top: 20px;
     }
 
-    button,
-    .button-primary {
-      cursor: pointer;
-      padding: 12px 20px;
-      border-radius: 5px;
-      font-weight: bold;
-      font-size: 16px;
-      transition: background-color 0.2s, transform 0.1s;
-      border: 2px solid transparent;
-    }
-
-    button:active,
-    .button-primary:active {
-      transform: translateY(1px);
-    }
-
-    .form-actions .button-primary {
-      background-color: #008C8C;
-      color: white;
-      border-color: #30454A;
-      font-size: 16px;
-      height: 48px; 
-    }
-
-    .form-actions .button-primary:hover {
-      background-color: #92D2D7;
-    }
-
-    button.secondary {
-      background-color: #30454A;
-      color: #fff;
-      border-color: #30454A;
-      font-size: 16px;
+    /* Specific button overrides for admin forms */
+    .form-actions button {
       height: 48px;
+      transform: none;
     }
 
-    button.secondary:hover {
-      background-color: #92D2D7;
+    .form-actions button:active {
+      transform: translateY(1px);
     }
 
     .mini-header {
       margin-bottom: 0cm;
+    }
+
+    /* User Management Styles */
+    .user-select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #008C8C;
+      border-radius: 4px;
+      font-size: 16px;
+      background-color: #E8F5F8;
+      color: #30454A;
+    }
+
+    .user-permissions-container {
+      display: none;
+    }
+
+    .user-name-section {
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .user-name-input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #008C8C;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      font-size: 16px;
+      background-color: #E8F5F8;
+      color: #30454A;
+    }
+
+    /* Custom secondary button for smaller inline actions */
+    .button-secondary-small {
+      background-color: #30454A;
+      color: white;
+      border: 1px solid #008C8C;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: "Teko", "Proxima Nova", Helvetica, sans-serif;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      width: auto;
+    }
+
+    .button-secondary-small:hover {
+      background-color: #92D2D7;
+    }
+
+    .user-groups-flex {
+      margin-bottom: 16px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .user-groups-container {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .card-permissions-container {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #E8F5F8;
+      padding: 12px;
+      border-radius: 4px;
+    }
+
+    .hidden-canvas {
+      display: none;
+    }
+
+    .loading-message {
+      text-align: center;
+      color: #666;
+      font-style: italic;
+      padding: 20px;
     }

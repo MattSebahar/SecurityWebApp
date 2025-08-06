@@ -33,7 +33,7 @@
     <div class="left-column">
       <div class="container company company-container">
         <div class="header-bar section-header">
-          Add New Company
+          Add New Card
         </div>
 
         <!-- Small QR Code Scanner in top right -->
@@ -48,7 +48,7 @@
         <input type="file" id="file-input" accept="image/*" onchange="handleQrCodeFile(event)">
         <div id="qr-status" style="position: absolute; top: 95px; right: 10px; font-size: 12px; text-align: center; width: 80px;"></div>
 
-        <label for="company">Company Name:</label>
+        <label for="company">Application Name:</label>
         <input type="text" id="company" placeholder="e.g., HubSpot, Airtable">
 
         <label for="email">Email / Username:</label>
@@ -61,7 +61,7 @@
         <input type="text" id="secretSeed" placeholder="Enter secret provided on sign up">
 
         <div class="form-actions">
-          <button class="button-primary" id="save-secret" onclick="saveNewSecret()">Save Secret</button>
+          <button id="save-secret" onclick="saveNewSecret()">Save Secret</button>
           <button class="secondary" id="cancel-edit" onclick="resetFormToAddMode()" style="display: none;">Cancel
             Edit</button>
         </div>
@@ -90,25 +90,33 @@
         <!-- User Selection and Permissions -->
         <div class="user-management-section">
           <h3 class='mini-header'>Select User or Group to Manage: </h3>
-          <select id="user-select" onchange="loadUserPermissions()" style="width: 100%; padding: 8px; margin-bottom: 16px; border: 1px solid #008C8C; border-radius: 4px;">
+          <select id="user-select" class="user-select" onchange="loadUserPermissions()">
             <option value="">-- Select a user or group --</option>
           </select>
           
           <!-- User Permissions Container -->
-          <div id="user-permissions-container" style="display: none;">
-            <div style="margin-bottom: 16px; display: flex; gap: 16px; flex-wrap: wrap;">
-              <div id="user-groups-container" style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <div id="user-permissions-container" class="user-permissions-container">
+            
+            <!-- User Name Field -->
+            <div id="user-name-section" class="user-name-section">
+              <h4 class='mini-header'>Display Name:</h4>
+              <input type="text" id="selected-user-name" class="user-name-input" placeholder="Enter display name" maxlength="50">
+              <button class="button-secondary-small" onclick="saveUserName()">Update Name</button>
+            </div>
+
+            <div class="user-groups-flex">
+              <div id="user-groups-container" class="user-groups-container">
                 <!-- User group radios will be populated here -->
               </div>
             </div>
             
             <h4 class='mini-header'>Card Permissions:</h4>
-            <div id="card-permissions-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #E8F5F8; padding: 12px; border-radius: 4px;">
+            <div id="card-permissions-container" class="card-permissions-container">
               <!-- Card permissions will be populated here -->
             </div>
             
             <div class="form-actions">
-              <button class="button-primary" onclick="saveUserPermissions()">Save Permissions</button>
+              <button onclick="saveUserPermissions()">Save Permissions</button>
               <button class="secondary" onclick="removeSelectedUser()">Remove User</button>
             </div>
           </div>
@@ -119,7 +127,7 @@
           <h3 class='mini-header'>Add New User Email: </h3>
           <input type="text" id="user-email" placeholder="e.g., user@startupbootcamp.com.au">
           <div class="form-actions">
-            <button class="button-primary" onclick="saveNewUser()">Add User</button>
+            <button onclick="saveNewUser()">Add User</button>
           </div>
         </div>
 
@@ -128,7 +136,7 @@
           <h3 class='mini-header'>Add New User Group: </h3>
           <input type="text" id="group-name" placeholder="e.g., Scouting Team">
           <div class="form-actions">
-            <button class="button-primary" onclick="saveNewUserGroup()">Add User Group</button>
+            <button onclick="saveNewUserGroup()">Add User Group</button>
           </div>
         </div>
       </div>
@@ -141,7 +149,7 @@
       <button class="feedback-ok-btn" id="ok-button" onclick="hideFeedbackPopup()">OK</button>
     </div>
 
-    <canvas id="qr-canvas" style="display: none;"></canvas>
+    <canvas id="qr-canvas" class="hidden-canvas"></canvas>
 
     <!--- Include all of the scripting --->
     <?!=include('imports/crypto-js'); ?>
