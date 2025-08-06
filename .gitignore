@@ -3,6 +3,7 @@
 # Ignore clasp files
 .clasp.json
 .clasp-settings.json
+
 # Ignore node_modules
 node_modules/
 
