@@ -100,7 +100,7 @@ SecurityWebApp/
 
 ## Security Functions
 
-> **Note:** For security, several key functions are left as stubs.  
+> **Note:** For security, several key functions are left as declarations.  
 > You must implement these yourself in `secretEncryptions.js`:
 
 ```js
